@@ -10,27 +10,22 @@ import (
 // ConfigJSON represents the configuration structure for network sleep monitoring.
 // It defines the parameters used to monitor network activity and trigger actions
 // when the system is idle for a specified duration.
-//
-// Fields:
-//   - CheckIntervalSeconds: How often (in seconds) to check network activity
-//   - IdleThresholdBytes: Maximum bytes per second to consider the network idle
-//   - IdleTimeBeforeActionSeconds: How long (in seconds) the network must be idle before triggering an action
-//   - ShutdownCommand: The system command to execute when idle threshold is met
 type ConfigJSON struct {
-	CheckIntervalSeconds        int    `json:"CheckIntervalSeconds"`
-	IdleThresholdBytes          uint64 `json:"IdleThresholdBytes"`
-	IdleTimeBeforeActionSeconds int    `json:"IdleTimeBeforeActionSeconds"`
-	ShutdownCommand             string `json:"ShutdownCommand"`
+	Interval        int    `json:"interval"`
+	IdleThreshold   uint64 `json:"idle_threshold"`
+	IdleTime        int    `json:"idle_time"`
+	ShutdownCommand string `json:"shutdown_command"`
 }
 
-// Config holds the configuration parameters for the network activity monitoring system.
-// It defines thresholds, intervals, and actions for monitoring network traffic
-// and triggering system shutdown when the network is idle for a specified duration.
+// Config holds configuration parameters for monitoring network activity and performing actions
+// when the system is idle. It specifies the interval for checking activity, the threshold for
+// considering the system idle based on network usage, the duration to wait before taking action,
+// and the command to execute when the idle condition is met.
 type Config struct {
-	CheckInterval        time.Duration // Zeit zwischen Messungen
-	IdleThresholdBytes   uint64        // Grenzwert in Bytes/s (unterhalb = inaktiv)
-	IdleTimeBeforeAction time.Duration // Wie lange inaktiv, bevor Aktion ausgelöst wird
-	ShutdownCommand      string        // Systembefehl zum Herunterfahren
+	CheckInterval        time.Duration
+	IdleThresholdBytes   uint64
+	IdleTimeBeforeAction time.Duration
+	ShutdownCommand      string
 }
 
 // DefaultConfig returns a Config struct with sensible default values for network monitoring.
@@ -43,7 +38,7 @@ func DefaultConfig() Config {
 	return Config{
 		CheckInterval:        10 * time.Second,
 		IdleThresholdBytes:   100 * 1024,
-		IdleTimeBeforeAction: 1 * time.Minute,
+		IdleTimeBeforeAction: 5 * time.Minute,
 		ShutdownCommand:      "shutdown /s /t 0",
 	}
 }
@@ -59,34 +54,35 @@ func DefaultConfig() Config {
 //   - Config: The parsed configuration with converted time durations
 //   - error: An error if file reading or JSON parsing fails
 func LoadConfig(filename string) (Config, error) {
-	var cfg Config
+	cfg := DefaultConfig() // Start with defaults
 
 	data, err := os.ReadFile(filename)
 	if err != nil {
-		return cfg, fmt.Errorf("fehler beim Lesen der Datei: %v", err)
+		// If file is missing, simply return defaults, no error
+		if os.IsNotExist(err) {
+			return cfg, nil
+		}
+		return cfg, fmt.Errorf("error reading file: %v", err)
 	}
 
 	var cfgJSON ConfigJSON
 	if err := json.Unmarshal(data, &cfgJSON); err != nil {
-		return cfg, fmt.Errorf("fehler beim Parsen der JSON: %v", err)
+		return cfg, fmt.Errorf("error parsing JSON: %v", err)
 	}
 
-	// Validiere und konvertiere Konfigurationswerte
-	if cfgJSON.CheckIntervalSeconds <= 0 {
-		return cfg, fmt.Errorf("CheckIntervalSeconds muss größer als 0 sein")
+	// Only overwrite fields that are set
+	if cfgJSON.Interval > 0 {
+		cfg.CheckInterval = time.Duration(cfgJSON.Interval) * time.Second
 	}
-	if cfgJSON.IdleTimeBeforeActionSeconds <= 0 {
-		return cfg, fmt.Errorf("IdleTimeBeforeActionSeconds muss größer als 0 sein")
+	if cfgJSON.IdleThreshold > 0 {
+		cfg.IdleThresholdBytes = cfgJSON.IdleThreshold
 	}
-	if cfgJSON.ShutdownCommand == "" {
-		return cfg, fmt.Errorf("ShutdownCommand darf nicht leer sein")
+	if cfgJSON.IdleTime > 0 {
+		cfg.IdleTimeBeforeAction = time.Duration(cfgJSON.IdleTime) * time.Second
 	}
-
-	// Konvertiere Sekunden in time.Duration
-	cfg.CheckInterval = time.Duration(cfgJSON.CheckIntervalSeconds) * time.Second
-	cfg.IdleThresholdBytes = cfgJSON.IdleThresholdBytes
-	cfg.IdleTimeBeforeAction = time.Duration(cfgJSON.IdleTimeBeforeActionSeconds) * time.Second
-	cfg.ShutdownCommand = cfgJSON.ShutdownCommand
+	if cfgJSON.ShutdownCommand != "" {
+		cfg.ShutdownCommand = cfgJSON.ShutdownCommand
+	}
 
 	return cfg, nil
 }

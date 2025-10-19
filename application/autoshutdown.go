@@ -33,12 +33,12 @@ func StartAutoShutdown(cfg structs.Config) error {
 	var lastSent, lastRecv uint64
 	var idleDuration time.Duration
 
-	fmt.Println("📡 Starte Netzwerküberwachung...")
+	fmt.Println("📡 Starting network monitoring...")
 
 	for {
 		sent, recv, err := getNetworkBytes()
 		if err != nil {
-			fmt.Println("❌ Fehler beim Abrufen der Netzwerkdaten:", err)
+			fmt.Println("❌ Error retrieving network data:", err)
 			time.Sleep(cfg.CheckInterval)
 			continue
 		}
@@ -54,9 +54,9 @@ func StartAutoShutdown(cfg structs.Config) error {
 
 			if speed < float64(cfg.IdleThresholdBytes) {
 				idleDuration += cfg.CheckInterval
-				fmt.Printf("⚠️  Niedriger Traffic für %v\n", idleDuration)
+				fmt.Printf("⚠️  Low traffic for %v\n", idleDuration)
 				if idleDuration >= cfg.IdleTimeBeforeAction {
-					fmt.Println("🛑 Keine Aktivität erkannt – PC wird heruntergefahren...")
+					fmt.Println("🛑 No activity detected – shutting down PC...")
 					return shutdownPC(cfg.ShutdownCommand)
 				}
 			} else {
@@ -80,7 +80,7 @@ func getNetworkBytes() (uint64, uint64, error) {
 		return 0, 0, err
 	}
 	if len(ioCounters) == 0 {
-		return 0, 0, fmt.Errorf("keine Netzwerkinterfaces gefunden")
+		return 0, 0, fmt.Errorf("no network interfaces found")
 	}
 	return ioCounters[0].BytesSent, ioCounters[0].BytesRecv, nil
 }
@@ -128,7 +128,7 @@ func FormatBytes(bytes uint64) string {
 //
 //	err := shutdownPC("shutdown /s /t 0")
 func shutdownPC(command string) error {
-	fmt.Println("🚦 Führe Shutdown-Befehl aus:", command)
+	fmt.Println("🚦 Executing shutdown command:", command)
 	parts := []string{"cmd", "/C", command}
 	// Linux: parts := []string{"bash", "-c", command}
 	cmd := exec.Command(parts[0], parts[1:]...)
