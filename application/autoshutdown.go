@@ -57,7 +57,7 @@ func StartAutoShutdown(cfg structs.Config) error {
 				fmt.Printf("⚠️  Niedriger Traffic für %v\n", idleDuration)
 				if idleDuration >= cfg.IdleTimeBeforeAction {
 					fmt.Println("🛑 Keine Aktivität erkannt – PC wird heruntergefahren...")
-					// return shutdownPC(cfg.ShutdownCommand)
+					return shutdownPC(cfg.ShutdownCommand)
 				}
 			} else {
 				idleDuration = 0
