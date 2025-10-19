@@ -1,0 +1,6 @@
+{
+    "CheckIntervalSeconds": 10,
+    "IdleThresholdBytes": 51200,
+    "IdleTimeBeforeActionSeconds": 300,
+    "ShutdownCommand": "shutdown /s /t 0"
+}

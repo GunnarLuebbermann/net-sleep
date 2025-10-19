@@ -49,9 +49,10 @@ func StartAutoShutdown(cfg structs.Config) error {
 			totalDiff := sentDiff + recvDiff
 			speed := float64(totalDiff) / cfg.CheckInterval.Seconds()
 
-			fmt.Printf("📊 Traffic: %.2f KB/s\n", speed/1024)
+			// Format speed with appropriate unit
+			fmt.Printf("📊 Traffic: %s/s\n", FormatBytes(uint64(speed)))
 
-			if totalDiff < cfg.IdleThresholdBytes {
+			if speed < float64(cfg.IdleThresholdBytes) {
 				idleDuration += cfg.CheckInterval
 				fmt.Printf("⚠️  Niedriger Traffic für %v\n", idleDuration)
 				if idleDuration >= cfg.IdleTimeBeforeAction {
@@ -82,6 +83,34 @@ func getNetworkBytes() (uint64, uint64, error) {
 		return 0, 0, fmt.Errorf("keine Netzwerkinterfaces gefunden")
 	}
 	return ioCounters[0].BytesSent, ioCounters[0].BytesRecv, nil
+}
+
+// FormatBytes converts a byte count into a human-readable string representation
+// with appropriate units (B, KB, MB, GB). The function automatically selects
+// the most appropriate unit based on the size of the input value and formats
+// the result with two decimal places for units larger than bytes.
+//
+// Parameters:
+//   - bytes: The number of bytes to format as a uint64 value
+//
+// Returns:
+//   - A string representation of the byte count with appropriate unit suffix
+//
+// Examples:
+//   - FormatBytes(512) returns "512 B"
+//   - FormatBytes(1536) returns "1.50 KB"
+//   - FormatBytes(2097152) returns "2.00 MB"
+//   - FormatBytes(1073741824) returns "1.00 GB"
+func FormatBytes(bytes uint64) string {
+	if bytes >= 1024*1024*1024 {
+		return fmt.Sprintf("%.2f GB", float64(bytes)/(1024*1024*1024))
+	} else if bytes >= 1024*1024 {
+		return fmt.Sprintf("%.2f MB", float64(bytes)/(1024*1024))
+	} else if bytes >= 1024 {
+		return fmt.Sprintf("%.2f KB", float64(bytes)/1024)
+	} else {
+		return fmt.Sprintf("%d B", bytes)
+	}
 }
 
 // shutdownPC executes a system shutdown command on the current operating system.
