@@ -9,8 +9,8 @@ import (
 func main() {
 	cfg, err := structs.LoadConfig("config.json")
 	if err != nil {
-		fmt.Println("No valid configuration found. Using default configuration.")
-		cfg = structs.DefaultConfig()
+		fmt.Println("Error loading config:", err)
+		return
 	}
 
 	fmt.Println("🌙 NetSleep started...")
